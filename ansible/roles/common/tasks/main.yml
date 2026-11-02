@@ -1,0 +1,13 @@
+- name: Install base packages
+  ansible.builtin.apt:
+    name: [curl, gnupg, ca-certificates, unattended-upgrades, python3-pip]
+    update_cache: true
+    state: present
+
+- name: Enable automatic security updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    mode: "0644"

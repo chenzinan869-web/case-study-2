@@ -1,0 +1,25 @@
+# The SOAR is now a container on ECS Fargate (see terraform/ecs.tf), so Ansible only manages
+# the on-prem hosts and the three monitoring servers on EC2.
+- name: Base configuration for every managed host
+  hosts: onprem:role_monitoring_stack:role_grafana
+  become: true
+  roles:
+    - common
+
+- name: Loki + Prometheus (REQ-06, REQ-07)
+  hosts: role_monitoring_stack
+  become: true
+  roles:
+    - monitoring_stack
+
+- name: Alloy log + metric shipping on-prem and on the monitoring server (REQ-07)
+  hosts: onprem:role_monitoring_stack
+  become: true
+  roles:
+    - alloy
+
+- name: Suricata IDS (REQ-07)
+  hosts: onprem_ids
+  become: true
+  roles:
+    - suricata

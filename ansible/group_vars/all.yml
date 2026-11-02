@@ -1,0 +1,8 @@
+internal_domain: innovatech.internal
+aws_region: eu-central-1
+
+# --- fill in from `terraform output` ---
+logs_bucket: "innovatech-logs-CHANGE-ME"
+
+loki_url: "http://loki.{{ internal_domain }}:3100"
+prometheus_url: "http://prometheus.{{ internal_domain }}:9090"

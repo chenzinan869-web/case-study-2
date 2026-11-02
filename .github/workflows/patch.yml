@@ -1,0 +1,20 @@
+name: weekly-patching
+on:
+  schedule:
+    - cron: "0 2 * * 0"        # every Sunday 02:00 UTC
+  workflow_dispatch:
+
+jobs:
+  patch:
+    runs-on: [self-hosted, linux, innovatech]
+    defaults:
+      run:
+        working-directory: ansible
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: eu-central-1
+    steps:
+      - uses: actions/checkout@v4
+      - run: ansible-galaxy collection install -r requirements.yml
+      - run: ansible-playbook patch.yml

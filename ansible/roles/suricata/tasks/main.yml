@@ -1,0 +1,35 @@
+- name: Add the OISF Suricata PPA
+  ansible.builtin.apt_repository:
+    repo: ppa:oisf/suricata-stable
+    state: present
+
+- name: Install Suricata
+  ansible.builtin.apt:
+    name: suricata
+    state: present
+    update_cache: true
+
+- name: Set the capture interface
+  ansible.builtin.replace:
+    path: /etc/suricata/suricata.yaml
+    regexp: '(af-packet:\s*\n\s*- interface:)\s*\S+'
+    replace: '\1 {{ suricata_interface | default("eth0") }}'
+  notify: restart suricata
+
+- name: Download rules (Emerging Threats Open)
+  ansible.builtin.command: suricata-update
+  register: su_update
+  changed_when: "'Done' in su_update.stdout or 'Loaded' in su_update.stdout"
+  notify: restart suricata
+
+- name: Make eve.json readable for Alloy
+  ansible.builtin.file:
+    path: /var/log/suricata
+    state: directory
+    mode: "0755"
+
+- name: Enable and start Suricata
+  ansible.builtin.service:
+    name: suricata
+    state: started
+    enabled: true

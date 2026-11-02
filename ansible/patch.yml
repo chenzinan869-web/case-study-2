@@ -1,0 +1,32 @@
+# Automated updates (REQ-05). Rolling: one host at a time. Fargate (SOAR) and RDS are patched by AWS.
+- name: Patch AWS hosts (rolling, one at a time)
+  hosts: role_monitoring_stack:role_grafana
+  become: true
+  serial: 1
+  tasks:
+    - import_tasks: tasks_patch.yml
+
+- name: Patch on-prem hosts (in small batches)
+  hosts: onprem
+  become: true
+  serial: 2
+  tasks:
+    - import_tasks: tasks_patch.yml
+
+- name: Patch the Ansible node itself (no automatic reboot)
+  hosts: ansible_node
+  become: true
+  tasks:
+    - name: Upgrade packages
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        autoremove: true
+    - name: Report if a reboot is needed
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: node_reboot
+    - name: Reboot warning
+      ansible.builtin.debug:
+        msg: "Ansible node needs a manual reboot"
+      when: node_reboot.stat.exists

@@ -1,0 +1,24 @@
+#!/bin/bash
+set -euo pipefail
+apt-get update -y
+apt-get install -y docker.io
+systemctl enable --now docker
+
+mkdir -p /etc/grafana/provisioning/datasources
+cat > /etc/grafana/provisioning/datasources/ds.yaml <<'DS'
+apiVersion: 1
+datasources:
+  - name: Loki
+    type: loki
+    url: ${loki_url}
+    isDefault: true
+  - name: Prometheus
+    type: prometheus
+    url: ${prometheus_url}
+DS
+
+docker rm -f grafana 2>/dev/null || true
+docker run -d --name grafana --restart unless-stopped -p 3000:3000 \
+  -v /etc/grafana/provisioning:/etc/grafana/provisioning \
+  -v grafana-data:/var/lib/grafana \
+  grafana/grafana-oss:11.3.0

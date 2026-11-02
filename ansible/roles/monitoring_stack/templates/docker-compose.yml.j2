@@ -1,0 +1,23 @@
+services:
+  loki:
+    image: grafana/loki:3.3.0
+    command: -config.file=/etc/loki/config.yml
+    restart: unless-stopped
+    ports: ["3100:3100"]
+    volumes:
+      - ./loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-remote-write-receiver
+    restart: unless-stopped
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+volumes:
+  loki-data:
+  prom-data:

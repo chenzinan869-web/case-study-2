@@ -1,0 +1,33 @@
+name: soar-container
+on:
+  push:
+    branches: [main]
+    paths: ["soar/**"]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: eu-central-1
+
+jobs:
+  build-and-deploy:
+    runs-on: [self-hosted, linux, innovatech]   # the runner needs Docker installed
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Build and push image
+        run: |
+          REPO=$(aws ecr describe-repositories --repository-names innovatech/soar --query 'repositories[0].repositoryUri' --output text)
+          docker build -t $REPO:latest -t $REPO:${{ github.sha }} soar
+          docker push $REPO:latest
+          docker push $REPO:${{ github.sha }}
+      - name: Roll out the new image (zero downtime, rolls back on failure)
+        run: |
+          aws ecs update-service --cluster innovatech --service soar --force-new-deployment >/dev/null
+          aws ecs wait services-stable --cluster innovatech --services soar

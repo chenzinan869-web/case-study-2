@@ -1,0 +1,15 @@
+# Dynamic inventory: every EC2 instance that Terraform created is found via its tags.
+plugin: amazon.aws.aws_ec2
+regions:
+  - eu-central-1
+filters:
+  tag:Project: innovatech-hybrid
+  instance-state-name: running
+hostnames:
+  - tag:Name
+compose:
+  ansible_host: private_ip_address
+  ansible_user: "'ubuntu'"
+keyed_groups:
+  - key: tags.Role
+    prefix: role      # -> role_monitoring_stack, role_grafana
