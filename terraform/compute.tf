@@ -33,45 +33,6 @@ resource "aws_instance" "loki_prometheus" {
   tags = { Name = "loki-prometheus", Role = "monitoring_stack" }
 }
 
-# ---------- Grafana (EC2 Auto Scaling Group, Subnet A) ----------
-resource "aws_launch_template" "grafana" {
-  name_prefix            = "grafana-"
-  image_id               = data.aws_ssm_parameter.ubuntu.value
-  instance_type          = var.instance_type_small
-  key_name               = aws_key_pair.ansible.key_name
-  vpc_security_group_ids = [aws_security_group.monitoring.id]
-  iam_instance_profile {
-    name = aws_iam_instance_profile.ec2.name
-  }
-  metadata_options {
-    http_tokens = "required"
-  }
-  user_data = base64encode(templatefile("${path.module}/grafana_user_data.sh.tftpl", {
-    loki_url       = "http://loki.${var.internal_domain}:3100"
-    prometheus_url = "http://prometheus.${var.internal_domain}:9090"
-  }))
-  tag_specifications {
-    resource_type = "instance"
-    tags          = { Name = "grafana", Role = "grafana" }
-  }
-}
-
-resource "aws_autoscaling_group" "grafana" {
-  name                = "grafana-asg"
-  min_size            = 1
-  max_size            = 2
-  desired_capacity    = 1
-  vpc_zone_identifier = aws_subnet.monitoring[*].id
-  health_check_type   = "EC2"
-  launch_template {
-    id      = aws_launch_template.grafana.id
-    version = "$Latest"
-  }
-  instance_refresh {
-    strategy = "Rolling"
-  }
-}
-
 # ---------- NLB in front of the SOAR (Subnet B); the SOAR itself is ECS Fargate (ecs.tf) ----------
 resource "aws_lb" "soar" {
   name               = "innovatech-soar-nlb"

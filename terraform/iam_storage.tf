@@ -53,11 +53,11 @@ resource "aws_iam_role_policy_attachment" "ssm" {
 data "aws_iam_policy_document" "ec2_access" {
   statement {
     actions   = ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:ListBucket"]
-    resources = [aws_s3_bucket.logs.arn, "${aws_s3_bucket.logs.arn}/*"]
+    resources = [aws_s3_bucket.logs.arn, "${aws_s3_bucket.logs.arn}/*", aws_s3_bucket.config.arn, "${aws_s3_bucket.config.arn}/*"]
   }
   statement {
     actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_db_instance.postgres.master_user_secret[0].secret_arn]
+    resources = [aws_db_instance.postgres.master_user_secret[0].secret_arn, aws_secretsmanager_secret.soar_app.arn]
   }
 }
 resource "aws_iam_role_policy" "ec2_access" {
