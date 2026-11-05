@@ -78,10 +78,6 @@ resource "aws_route_table" "private" {
     nat_gateway_id = aws_nat_gateway.nat.id
   }
 }
-resource "aws_vpn_gateway_route_propagation" "private" {
-  vpn_gateway_id = aws_vpn_gateway.vgw.id
-  route_table_id = aws_route_table.private.id
-}
 resource "aws_route_table_association" "monitoring" {
   count          = 2
   subnet_id      = aws_subnet.monitoring[count.index].id

@@ -8,21 +8,21 @@ resource "aws_security_group" "monitoring" {
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = [var.onprem_cidr]
+    cidr_blocks = local.onprem_sources
   }
   ingress {
     description = "Loki from on-prem (Alloy)"
     from_port   = 3100
     to_port     = 3100
     protocol    = "tcp"
-    cidr_blocks = [var.onprem_cidr]
+    cidr_blocks = local.onprem_sources
   }
   ingress {
     description = "Prometheus from on-prem (Alloy remote_write)"
     from_port   = 9090
     to_port     = 9090
     protocol    = "tcp"
-    cidr_blocks = [var.onprem_cidr]
+    cidr_blocks = local.onprem_sources
   }
   ingress {
     description = "Grafana to Loki and Prometheus inside the SG"
@@ -36,7 +36,7 @@ resource "aws_security_group" "monitoring" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = [var.onprem_cidr]
+    cidr_blocks = local.onprem_sources
   }
   egress {
     from_port   = 0
@@ -56,7 +56,7 @@ resource "aws_security_group" "soar" {
     from_port   = 8080
     to_port     = 8080
     protocol    = "tcp"
-    cidr_blocks = [var.onprem_cidr, var.vpc_cidr]
+    cidr_blocks = concat(local.onprem_sources, [var.vpc_cidr])
   }
   egress {
     from_port   = 0

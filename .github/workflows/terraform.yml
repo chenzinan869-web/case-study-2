@@ -9,7 +9,7 @@ on:
 
 env:
   AWS_REGION: eu-central-1
-  TF_VAR_onprem_public_ip: ${{ secrets.ONPREM_PUBLIC_IP }}
+  TF_VAR_wireguard_client_public_key: ${{ secrets.WIREGUARD_CLIENT_PUBLIC_KEY }}
   TF_VAR_ssh_public_key: ${{ secrets.ANSIBLE_SSH_PUBLIC_KEY }}
   TF_VAR_soar_webhook_token: ${{ secrets.SOAR_WEBHOOK_TOKEN }}
   TF_VAR_kibana_api_key: ${{ secrets.KIBANA_API_KEY }}

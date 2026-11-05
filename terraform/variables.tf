@@ -11,10 +11,6 @@ variable "onprem_cidr" {
   type        = string
   default     = "192.168.10.0/24"
 }
-variable "onprem_public_ip" {
-  description = "Public IP of the on-premise firewall (customer gateway)"
-  type        = string
-}
 variable "internal_domain" {
   type    = string
   default = "innovatech.internal"
@@ -60,4 +56,14 @@ variable "soar_min_tasks" {
 variable "soar_max_tasks" {
   type    = number
   default = 6
+}
+
+variable "wireguard_client_public_key" {
+  description = "Public key of the WireGuard client on the on-prem Ansible node"
+  type        = string
+}
+variable "wireguard_port" {
+  description = "UDP port of the WireGuard server"
+  type        = number
+  default     = 51820
 }

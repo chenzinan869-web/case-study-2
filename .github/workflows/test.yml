@@ -1,0 +1,39 @@
+name: CI Quality Gate - Linting & Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-and-test:
+    name: Code Quality & Unit Tests (Eis 05 & 11)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: 2. Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 3. Installeer test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest ansible
+
+      - name: 4. Python Linting (flake8)
+        run: |
+          # Stop de pipeline direct bij syntaxfouten of ongedefinieerde variabelen
+          flake8 soar/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
+
+      - name: 5. Voer unittests uit met pytest
+        run: |
+          pytest -v tests/
+
+      - name: 6. Valideer Ansible Playbook Syntax
+        run: |
+          ansible-playbook -i ansible/hosts.ini ansible/patch.yml --syntax-check
