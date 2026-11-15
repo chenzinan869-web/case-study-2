@@ -1,0 +1,64 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/user-data.log) 2>&1
+# config version: ${config_hash}
+
+apt-get update -y
+apt-get install -y docker.io postgresql-client jq
+snap install aws-cli --classic
+systemctl enable --now docker
+AWS=/snap/bin/aws
+export AWS_DEFAULT_REGION=${region}
+
+DBJSON=$($AWS secretsmanager get-secret-value --secret-id "${db_secret_arn}" --query SecretString --output text)
+DB_USER=$(echo "$DBJSON" | jq -r .username)
+DB_PASS=$(echo "$DBJSON" | jq -r .password)
+APPJSON=$($AWS secretsmanager get-secret-value --secret-id "${soar_secret_arn}" --query SecretString --output text)
+SOAR_TOKEN=$(echo "$APPJSON" | jq -r .webhook_token)
+
+# Grafana gets its own database on the RDS instance
+export PGPASSWORD="$DB_PASS"
+CONN="host=${db_host} dbname=soar user=$DB_USER sslmode=require"
+until psql "$CONN" -c 'select 1' >/dev/null 2>&1; do sleep 10; done
+psql "$CONN" -tc "select 1 from pg_database where datname='grafana'" | grep -q 1 || psql "$CONN" -c 'create database grafana'
+
+mkdir -p /etc/grafana/provisioning/datasources /etc/grafana/provisioning/alerting /etc/grafana/provisioning/dashboards /var/lib/grafana-dashboards
+$AWS s3 cp s3://${config_bucket}/grafana/alerting.yaml /etc/grafana/provisioning/alerting/alerting.yaml
+$AWS s3 cp s3://${config_bucket}/grafana/dashboard-soar.json /var/lib/grafana-dashboards/soar.json
+
+cat > /etc/grafana/provisioning/datasources/ds.yaml <<'DS'
+apiVersion: 1
+datasources:
+  - name: Loki
+    uid: loki
+    type: loki
+    url: ${loki_url}
+    isDefault: true
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    url: ${prometheus_url}
+DS
+
+cat > /etc/grafana/provisioning/dashboards/soar.yaml <<'DB'
+apiVersion: 1
+providers:
+  - name: soar
+    folder: Innovatech
+    type: file
+    options:
+      path: /var/lib/grafana-dashboards
+DB
+
+docker rm -f grafana 2>/dev/null || true
+docker run -d --name grafana --restart unless-stopped -p 3000:3000 \
+  -e GF_DATABASE_TYPE=postgres \
+  -e GF_DATABASE_HOST=${db_host}:5432 \
+  -e GF_DATABASE_NAME=grafana \
+  -e GF_DATABASE_USER="$DB_USER" \
+  -e GF_DATABASE_PASSWORD="$DB_PASS" \
+  -e GF_DATABASE_SSL_MODE=require \
+  -e SOAR_TOKEN="$SOAR_TOKEN" \
+  -v /etc/grafana/provisioning:/etc/grafana/provisioning \
+  -v /var/lib/grafana-dashboards:/var/lib/grafana-dashboards \
+  grafana/grafana-oss:11.3.0

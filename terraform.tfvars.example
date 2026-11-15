@@ -1,0 +1,5 @@
+onprem_public_ip = "203.0.113.10"      # public IP of your on-prem firewall
+onprem_cidr      = "192.168.10.0/24"   # on-prem LAN
+ssh_public_key   = "ssh-ed25519 AAAA... ansible@ansible-node"
+# soar_webhook_token, kibana_api_key: pass as TF_VAR_... environment variables, never in this file
+kibana_url       = ""   # e.g. https://kibana.example.com (optional, needed for host isolation)

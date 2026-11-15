@@ -1,0 +1,81 @@
+#!/bin/bash
+set -euo pipefail
+exec > >(tee /var/log/user-data.log) 2>&1
+
+apt-get update -y
+apt-get install -y docker.io docker-compose-v2
+systemctl enable --now docker
+
+mkdir -p /opt/monitoring
+cd /opt/monitoring
+
+cat > loki-config.yml <<'LOKI'
+auth_enabled: false
+server:
+  http_listen_port: 3100
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    s3:
+      region: ${region}
+      bucketnames: ${bucket}
+schema_config:
+  configs:
+    - from: "2024-01-01"
+      store: tsdb
+      object_store: s3
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+LOKI
+
+cat > prometheus.yml <<'PROM'
+global:
+  scrape_interval: 30s
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+  # The SOAR monitors itself: every Fargate task exposes /metrics.
+  # Cloud Map returns one A record per running task, so each task is scraped separately.
+  - job_name: soar
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: ["soar.svc.${domain}"]
+        type: A
+        port: 8080
+        refresh_interval: 15s
+PROM
+
+cat > docker-compose.yml <<'COMPOSE'
+services:
+  loki:
+    image: grafana/loki:3.3.0
+    command: -config.file=/etc/loki/config.yml
+    restart: unless-stopped
+    ports: ["3100:3100"]
+    volumes:
+      - ./loki-config.yml:/etc/loki/config.yml:ro
+      - loki-data:/loki
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-remote-write-receiver
+    restart: unless-stopped
+    ports: ["9090:9090"]
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-data:/prometheus
+volumes:
+  loki-data:
+  prom-data:
+COMPOSE
+
+docker compose up -d
