@@ -13,6 +13,7 @@ resource "aws_instance" "loki_prometheus" {
   ami                    = data.aws_ssm_parameter.ubuntu.value
   instance_type          = var.instance_type_monitoring
   subnet_id              = aws_subnet.monitoring[0].id
+  private_ip             = "10.20.10.82"
   vpc_security_group_ids = [aws_security_group.monitoring.id]
   key_name               = aws_key_pair.ansible.key_name
   iam_instance_profile   = aws_iam_instance_profile.ec2.name

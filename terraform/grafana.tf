@@ -35,12 +35,24 @@ locals {
   grafana_config_hash = md5("${filemd5("${path.module}/grafana/alerting.yaml")}${filemd5("${path.module}/grafana/dashboard-soar.json")}")
 }
 
+resource "aws_network_interface" "grafana" {
+  subnet_id       = aws_subnet.monitoring[0].id
+  private_ips     = ["10.20.10.104"]
+  security_groups = [aws_security_group.monitoring.id]
+  tags            = { Name = "grafana-eni" }
+}
+
 resource "aws_launch_template" "grafana" {
-  name_prefix            = "grafana-"
-  image_id               = data.aws_ssm_parameter.ubuntu.value
-  instance_type          = var.instance_type_small
-  key_name               = aws_key_pair.ansible.key_name
-  vpc_security_group_ids = [aws_security_group.monitoring.id]
+  name_prefix   = "grafana-"
+  image_id      = data.aws_ssm_parameter.ubuntu.value
+  instance_type = var.instance_type_small
+  key_name      = aws_key_pair.ansible.key_name
+
+  network_interfaces {
+    device_index         = 0
+    network_interface_id = aws_network_interface.grafana.id
+  }
+
   iam_instance_profile {
     name = aws_iam_instance_profile.ec2.name
   }
@@ -66,9 +78,9 @@ resource "aws_launch_template" "grafana" {
 resource "aws_autoscaling_group" "grafana" {
   name                = "grafana-asg"
   min_size            = 1
-  max_size            = 2
+  max_size            = 1
   desired_capacity    = 1
-  vpc_zone_identifier = aws_subnet.monitoring[*].id
+  vpc_zone_identifier = [aws_subnet.monitoring[0].id]
   health_check_type   = "EC2"
   launch_template {
     id      = aws_launch_template.grafana.id
