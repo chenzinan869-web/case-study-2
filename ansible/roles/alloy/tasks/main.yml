@@ -1,3 +1,17 @@
+- name: Ensure apt keyrings directory exists
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Remove conflicting legacy Grafana apt sources
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/apt/sources.list.d/grafana.list
+    - /etc/apt/sources.list.d/grafana.sources
+
 - name: Add Grafana apt key
   ansible.builtin.get_url:
     url: https://apt.grafana.com/gpg.key

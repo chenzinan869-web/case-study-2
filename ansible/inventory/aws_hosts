@@ -1,0 +1,5 @@
+[role_monitoring_stack]
+loki-prometheus ansible_host=10.20.10.82 ansible_user=ubuntu
+
+[role_grafana]
+grafana ansible_host=10.20.10.104 ansible_user=ubuntu

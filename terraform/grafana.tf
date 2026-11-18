@@ -1,4 +1,4 @@
-# Grafana is stateless: its database is on RDS and its alerts and dashboard come from S3.
+﻿# Grafana is stateless: its database is on RDS and its alerts and dashboard come from S3.
 resource "aws_s3_bucket" "config" {
   bucket = "innovatech-config-${random_id.suffix.hex}"
 }
@@ -80,7 +80,7 @@ resource "aws_autoscaling_group" "grafana" {
   min_size            = 1
   max_size            = 1
   desired_capacity    = 1
-  vpc_zone_identifier = [aws_subnet.monitoring[0].id]
+  availability_zones  = [aws_subnet.monitoring[0].availability_zone]
   health_check_type   = "EC2"
   launch_template {
     id      = aws_launch_template.grafana.id
